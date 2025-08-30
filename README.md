@@ -53,7 +53,7 @@ Code breaks. LLMs help, but their output still crashes on edge cases.
 ## What We're Building
 Simple patterns that prevent common failures. Not bloated frameworks—just focused solutions that work.
 
-When you paste these into ChatGPT or Claude, you get sturdier code that handles real-world chaos better.
+When you paste these into your LLM conversations, you get sturdier code that handles real-world chaos better.
 
 ```python
 # Typical LLM output
@@ -144,7 +144,7 @@ Monitor what's going wrong in your apps
 Ready-to-use patterns for trading bots, file organizers, and chat bots
 
 **Framework Integration**  
-Copy-paste these into ChatGPT/Claude for better code generation
+Copy-paste these into LLM conversations for better code generation
 
 ## Help Us Build This
 
