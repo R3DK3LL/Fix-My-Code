@@ -60,11 +60,16 @@ When you paste these into ChatGPT or Claude, you get sturdier code that handles 
 def process_trade(price):
     return price * 1.02  # Works until it doesn't
 
-# With our patterns
+# With π₁ patterns
 def process_trade(price):
-    if is_valid_price(price):
-        return calculate_safely(price, 1.02)
-    return handle_invalid_input(price)
+    # π₁: ∀n φ(price, n) → check trade scaling stability
+    def predicate(price, n):
+        return price * (1.02 ** n) < 1000000
+    
+    for n in range(100):
+        if not predicate(price, n):
+            return None   # collapse
+    return price * 1.02   # aligned
 ```
 
 **Goal:** Stop the 2am debugging sessions. Make code that just works.
