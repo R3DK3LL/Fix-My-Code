@@ -4,7 +4,7 @@ import hashlib
 import hmac
 import json
 import time
-from typing import Dict, Any, List, Optional, Set, Tuple, Callable
+from typing import Dict, Any, List, Optional, Set
 from dataclasses import dataclass, field
 from enum import Enum
 import threading
@@ -116,7 +116,10 @@ class DataSwarmEngine:
 
         self.params = adaptive_params or {}
         self.min_replicas = max(
-            int(self.params.get("replica_factor", 0.3) * self._get_initial_capacity()),
+            int(
+                self.params.get("replica_factor", 0.3)
+                * self._get_initial_capacity()
+            ),
             2,
         )
         self.capacity = self._initialize_adaptive_capacity()
@@ -142,7 +145,9 @@ class DataSwarmEngine:
         )
 
     def _get_initial_capacity(self) -> int:
-        return max(int(self.params.get("base_capacity_multiplier", 1.0) * 100), 50)
+        return max(
+            int(self.params.get("base_capacity_multiplier", 1.0) * 100), 50
+        )
 
     def _initialize_adaptive_capacity(self) -> NodeCapacity:
         base_capacity = self._get_initial_capacity()
@@ -155,7 +160,9 @@ class DataSwarmEngine:
         )
 
     def _get_adaptive_window_size(self) -> int:
-        return max(int(self.params.get("window_size_multiplier", 1.0) * 50), 10)
+        return max(
+            int(self.params.get("window_size_multiplier", 1.0) * 50), 10
+        )
 
     def _get_adaptive_worker_count(self) -> int:
         return max(int(self.params.get("worker_multiplier", 1.0) * 2), 1)
@@ -175,7 +182,10 @@ class DataSwarmEngine:
         return self.verify_message_signature(message)
 
     def deliver_message(self, message: SwarmMessage) -> bool:
-        if message.recipient_id != self.node_id and message.recipient_id != "broadcast":
+        if (
+            message.recipient_id != self.node_id
+            and message.recipient_id != "broadcast"
+        ):
             return False
 
         start_time = time.perf_counter()
@@ -192,7 +202,9 @@ class DataSwarmEngine:
             return False
 
     def get_dynamic_latency_bound(self) -> float:
-        if len(self.latency_history) < max(int(len(self.latency_history) * 0.1), 3):
+        if len(self.latency_history) < max(
+            int(len(self.latency_history) * 0.1), 3
+        ):
             min_bound = self.params.get("min_latency_ms", 10.0)
             self.swarm_state.dynamic_latency_bound = min_bound
             return min_bound
@@ -208,10 +220,14 @@ class DataSwarmEngine:
         load_multiplier = 1.0 + (self.swarm_state.network_load * 2.0)
         std_multiplier = self.params.get("std_deviation_multiplier", 2.0)
 
-        dynamic_bound = avg_latency + (std_multiplier * std_latency * load_multiplier)
+        dynamic_bound = avg_latency + (
+            std_multiplier * std_latency * load_multiplier
+        )
 
         min_bound = self.params.get("min_latency_ms", 10.0)
-        max_bound = avg_latency * self.params.get("max_latency_multiplier", 10.0)
+        max_bound = avg_latency * self.params.get(
+            "max_latency_multiplier", 10.0
+        )
 
         self.swarm_state.dynamic_latency_bound = max(
             min(dynamic_bound, max_bound), min_bound
@@ -219,9 +235,14 @@ class DataSwarmEngine:
         return self.swarm_state.dynamic_latency_bound
 
     def send_p2p_message(
-        self, recipient_id: str, message_type: MessageType, payload: Dict[str, Any]
+        self,
+        recipient_id: str,
+        message_type: MessageType,
+        payload: Dict[str, Any],
     ) -> bool:
-        message = self.create_signed_message(recipient_id, message_type, payload)
+        message = self.create_signed_message(
+            recipient_id, message_type, payload
+        )
 
         if not self.validate_message(message):
             return False
@@ -236,7 +257,10 @@ class DataSwarmEngine:
         return True
 
     def create_signed_message(
-        self, recipient_id: str, message_type: MessageType, payload: Dict[str, Any]
+        self,
+        recipient_id: str,
+        message_type: MessageType,
+        payload: Dict[str, Any],
     ) -> SwarmMessage:
         message_id = str(uuid.uuid4())
         timestamp = time.time()
@@ -283,7 +307,10 @@ class DataSwarmEngine:
         return message.signature == expected_signature
 
     def multi_signature_verify(
-        self, data: Dict[str, Any], signatures: List[str], schemes: List[str] = None
+        self,
+        data: Dict[str, Any],
+        signatures: List[str],
+        schemes: List[str] = None,
     ) -> bool:
         schemes = schemes or ["HMAC-SHA256"]
 
@@ -292,7 +319,9 @@ class DataSwarmEngine:
                 if scheme == "HMAC-SHA256":
                     content_str = json.dumps(data, sort_keys=True)
                     expected_sig = hmac.new(
-                        self.secret_key, content_str.encode("utf-8"), hashlib.sha256
+                        self.secret_key,
+                        content_str.encode("utf-8"),
+                        hashlib.sha256,
                     ).hexdigest()
                     if signatures[i] == expected_sig:
                         return True
@@ -377,7 +406,8 @@ class DataSwarmEngine:
     def _replicate_packet(self, packet: DataPacket):
         needed_replicas = self.min_replicas - packet.replica_count
         available_peers = list(
-            set(self.peer_nodes.keys()) - self.replica_registry[packet.packet_id]
+            set(self.peer_nodes.keys())
+            - self.replica_registry[packet.packet_id]
         )
 
         for i, peer_id in enumerate(available_peers[:needed_replicas]):
@@ -385,8 +415,13 @@ class DataSwarmEngine:
 
     def validate_swarm_coherence(self, packet: DataPacket) -> bool:
         with self.lock:
-            version_tolerance = max(int(self.params.get("version_tolerance", 1)), 1)
-            if packet.swarm_version > self.swarm_state.version + version_tolerance:
+            version_tolerance = max(
+                int(self.params.get("version_tolerance", 1)), 1
+            )
+            if (
+                packet.swarm_version
+                > self.swarm_state.version + version_tolerance
+            ):
                 return False
 
             if packet.parent_hash:
@@ -404,9 +439,13 @@ class DataSwarmEngine:
         return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
     def swarm_data_packet(
-        self, data: Dict[str, Any], expected_schema: Optional[Dict[str, type]] = None
+        self,
+        data: Dict[str, Any],
+        expected_schema: Optional[Dict[str, type]] = None,
     ) -> Optional[str]:
-        if expected_schema and not self.validate_payload_schema(data, expected_schema):
+        if expected_schema and not self.validate_payload_schema(
+            data, expected_schema
+        ):
             return None
 
         packet = self.create_signed_packet(data)
@@ -494,10 +533,14 @@ class DataSwarmEngine:
         return False
 
     def recover_capacity_failure(self, failure: FailureRecord) -> bool:
-        capacity_threshold = self.params.get("capacity_recovery_threshold", 0.8)
+        capacity_threshold = self.params.get(
+            "capacity_recovery_threshold", 0.8
+        )
         if self.capacity.current_load > capacity_threshold:
             cleanup_ratio = self.params.get("packet_cleanup_ratio", 0.1)
-            cleanup_count = max(int(len(self.local_packets) * cleanup_ratio), 1)
+            cleanup_count = max(
+                int(len(self.local_packets) * cleanup_ratio), 1
+            )
 
             oldest_packets = sorted(
                 self.local_packets.items(), key=lambda x: x[1].timestamp
@@ -523,13 +566,15 @@ class DataSwarmEngine:
     ) -> bool:
         if not self.verify_node_capacity(node_id, capacity):
             self.record_failure(
-                FailureType.CAPACITY_EXCEEDED, f"Node {node_id} capacity insufficient"
+                FailureType.CAPACITY_EXCEEDED,
+                f"Node {node_id} capacity insufficient",
             )
             return False
 
         if self.check_role_conflict(node_id, role):
             self.record_failure(
-                FailureType.ROLE_CONFLICT, f"Role conflict for {node_id}: {role}"
+                FailureType.ROLE_CONFLICT,
+                f"Role conflict for {node_id}: {role}",
             )
             return False
 
@@ -545,9 +590,12 @@ class DataSwarmEngine:
         self.monitor_node_behavior(node_id)
         return True
 
-    def verify_node_capacity(self, node_id: str, capacity: NodeCapacity) -> bool:
+    def verify_node_capacity(
+        self, node_id: str, capacity: NodeCapacity
+    ) -> bool:
         min_packets = max(
-            int(self.params.get("min_packet_capacity_multiplier", 1.0) * 50), 10
+            int(self.params.get("min_packet_capacity_multiplier", 1.0) * 50),
+            10,
         )
         min_connections = max(
             int(self.params.get("min_connection_multiplier", 1.0) * 5), 2
@@ -573,7 +621,9 @@ class DataSwarmEngine:
                 int(self.params.get("max_coordinators_multiplier", 1.0) * 3), 1
             )
             coordinator_count = sum(
-                1 for r in self.node_roles.values() if r == SwarmNodeRole.COORDINATOR
+                1
+                for r in self.node_roles.values()
+                if r == SwarmNodeRole.COORDINATOR
             )
             if coordinator_count >= max_coordinators:
                 return True
@@ -710,10 +760,13 @@ class DataSwarmEngine:
             base_capacity = self._get_initial_capacity()
             capacity = NodeCapacity(
                 max_packets=int(
-                    base_capacity * self.params.get("peer_capacity_multiplier", 0.5)
+                    base_capacity
+                    * self.params.get("peer_capacity_multiplier", 0.5)
                 ),
                 max_connections=max(int(base_capacity * 0.25), 2),
-                processing_power=self.params.get("peer_processing_multiplier", 0.5),
+                processing_power=self.params.get(
+                    "peer_processing_multiplier", 0.5
+                ),
                 storage_capacity=int(base_capacity * 50),
                 current_load=0.0,
             )
@@ -730,7 +783,8 @@ class DataSwarmEngine:
 
             self.min_replicas = max(
                 int(
-                    self.params.get("replica_factor", 0.3) * self.swarm_state.node_count
+                    self.params.get("replica_factor", 0.3)
+                    * self.swarm_state.node_count
                 ),
                 2,
             )
@@ -762,7 +816,6 @@ class DataSwarmEngine:
 
 if __name__ == "__main__":
     import random
-    import sys
 
     def test_basic_swarm_functionality():
         print("=== Testing Basic Swarm Functionality ===")
@@ -781,9 +834,15 @@ if __name__ == "__main__":
         }
 
         # Initialize swarm nodes
-        node1 = DataSwarmEngine("node_001", "test-secret-key-123", adaptive_params)
-        node2 = DataSwarmEngine("node_002", "test-secret-key-123", adaptive_params)
-        node3 = DataSwarmEngine("node_003", "test-secret-key-123", adaptive_params)
+        node1 = DataSwarmEngine(
+            "node_001", "test-secret-key-123", adaptive_params
+        )
+        node2 = DataSwarmEngine(
+            "node_002", "test-secret-key-123", adaptive_params
+        )
+        node3 = DataSwarmEngine(
+            "node_003", "test-secret-key-123", adaptive_params
+        )
 
         print(f"Node 1 initial capacity: {node1.capacity.max_packets} packets")
         print(f"Node 1 min replicas: {node1.min_replicas}")
@@ -822,13 +881,17 @@ if __name__ == "__main__":
                 "temperature": random.uniform(15.0, 35.0),
                 "humidity": random.uniform(30.0, 80.0),
                 "timestamp": int(time.time()) + i,
-                "location": random.choice(["warehouse_a", "warehouse_b", "office"]),
+                "location": random.choice(
+                    ["warehouse_a", "warehouse_b", "office"]
+                ),
             }
 
             packet_id = node1.swarm_data_packet(sensor_data, sensor_schema)
             if packet_id:
                 valid_packets.append(packet_id)
-                print(f"✓ Packet {i+1} swarmed successfully: {packet_id[:8]}...")
+                print(
+                    f"✓ Packet {i+1} swarmed successfully: {packet_id[:8]}..."
+                )
             else:
                 print(f"✗ Packet {i+1} failed to swarm")
 
@@ -841,7 +904,9 @@ if __name__ == "__main__":
             "location": "test_location",
         }
 
-        invalid_packet_id = node1.swarm_data_packet(invalid_data, sensor_schema)
+        invalid_packet_id = node1.swarm_data_packet(
+            invalid_data, sensor_schema
+        )
         if invalid_packet_id is None:
             print("✓ Invalid packet correctly collapsed")
         else:
@@ -871,7 +936,9 @@ if __name__ == "__main__":
                 print(f"✗ Message {i+1} failed to send")
 
         print(f"Messages sent successfully: {success_count}/3")
-        print(f"Current latency bound: {node1.get_dynamic_latency_bound():.2f}ms")
+        print(
+            f"Current latency bound: {node1.get_dynamic_latency_bound():.2f}ms"
+        )
 
         return success_count
 
@@ -880,12 +947,14 @@ if __name__ == "__main__":
 
         # Simulate network timeout failure
         timeout_failure_id = node1.record_failure(
-            FailureType.NETWORK_TIMEOUT, "Simulated network timeout during testing"
+            FailureType.NETWORK_TIMEOUT,
+            "Simulated network timeout during testing",
         )
 
         # Simulate capacity exceeded failure
         capacity_failure_id = node1.record_failure(
-            FailureType.CAPACITY_EXCEEDED, "Simulated capacity exceeded during testing"
+            FailureType.CAPACITY_EXCEEDED,
+            "Simulated capacity exceeded during testing",
         )
 
         # Check failure handling
@@ -893,7 +962,9 @@ if __name__ == "__main__":
 
         print(f"Total failures recorded: {health['failure_count']}")
         print(f"Quarantined failures: {health['quarantined_failures']}")
-        print(f"System constraints valid: {health['system_constraints_valid']}")
+        print(
+            f"System constraints valid: {health['system_constraints_valid']}"
+        )
 
         return health["failure_count"], health["quarantined_failures"]
 
@@ -919,7 +990,9 @@ if __name__ == "__main__":
         print(f"Network load: {node1.swarm_state.network_load:.2f}")
         print(f"Current capacity load: {node1.capacity.current_load:.2f}")
 
-        return abs(new_bound - initial_bound) > 1.0  # Check if adaptation occurred
+        return (
+            abs(new_bound - initial_bound) > 1.0
+        )  # Check if adaptation occurred
 
     def run_comprehensive_test():
         print("🔒 VALHALLA Data Swarm Engine - Standalone Test")
@@ -952,12 +1025,14 @@ if __name__ == "__main__":
 
             # Test results summary
             print("\n=== Test Results Summary ===")
-            print(f"✓ Swarm nodes initialized: 3/3")
+            print("✓ Swarm nodes initialized: 3/3")
             print(f"✓ Valid packets swarmed: {len(valid_packets)}/5")
             print(f"✓ P2P messages sent: {message_success}/3")
             print(f"✓ Failures handled: {failures > 0}")
             print(f"✓ Adaptive parameters working: {adaptation_occurred}")
-            print(f"✓ System constraints valid: {health['system_constraints_valid']}")
+            print(
+                f"✓ System constraints valid: {health['system_constraints_valid']}"
+            )
 
             overall_success = (
                 len(valid_packets) >= 3
@@ -967,7 +1042,9 @@ if __name__ == "__main__":
             )
 
             if overall_success:
-                print("\n🎉 All tests PASSED - Swarm engine functioning correctly!")
+                print(
+                    "\n🎉 All tests PASSED - Swarm engine functioning correctly!"
+                )
                 return 0
             else:
                 print("\n⚠️  Some tests FAILED - Check implementation")
